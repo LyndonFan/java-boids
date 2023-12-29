@@ -1,6 +1,4 @@
 import java.util.ArrayList;
-import java.util.Arrays;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -70,12 +68,12 @@ public class Main extends JFrame {
             g.setColor(Color.BLACK);
             ArrayList<Boid> boids = boidManager.getBoids();
             for (int i = 0; i < boids.size(); i++) {
-                int x = (int) Math.round(boids.get(i).posX);
-                int y = (int) Math.round(boids.get(i).posY);
-                double velocityMagnitude = Math.sqrt(boids.get(i).velocityX * boids.get(i).velocityX + boids.get(i).velocityY * boids.get(i).velocityY);
+                int x = (int) Math.round(boids.get(i).getPosX());
+                int y = (int) Math.round(boids.get(i).getPosY());
+                double velocityMagnitude = boids.get(i).getVelocityMagnitude();
                 double scale = 20;
-                double scaledVelocityX = boids.get(i).velocityX * scale / velocityMagnitude;
-                double scaledVelocityY = boids.get(i).velocityY * scale / velocityMagnitude;
+                double scaledVelocityX = boids.get(i).getVelocityX() * scale / velocityMagnitude;
+                double scaledVelocityY = boids.get(i).getVelocityY() * scale / velocityMagnitude;
                 g.setColor(Color.WHITE);
                 int[] polygonX = {
                     (int) Math.round(x-scaledVelocityY/2-scaledVelocityX/2),

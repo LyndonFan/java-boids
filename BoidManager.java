@@ -1,5 +1,4 @@
 import java.util.ArrayList;
-import java.util.List;
 
 public class BoidManager {
     private int numberOfBoids;
@@ -43,6 +42,10 @@ public class BoidManager {
             double velocityX = Math.cos(angle) * boidFixedVelocity;
             double velocityY = Math.sin(angle) * boidFixedVelocity;
             Boid boid = new Boid(
+                0,
+                0,
+                maxWidth,
+                maxHeight,
                 posX,
                 posY,
                 velocityX,
@@ -60,17 +63,10 @@ public class BoidManager {
         this.alignBoids();
         this.steerBoids();
         this.avoidCollisions();
-        this.boundBoids();
         this.moveBoids();
     }
 
     private void alignBoids() {
-        List<Double> oldVelocityX = new ArrayList<>();
-        List<Double> oldVelocityY = new ArrayList<>();
-        for (int i = 0; i < boids.size(); i++) {
-            oldVelocityX.add(boids.get(i).velocityX);
-            oldVelocityY.add(boids.get(i).velocityY);
-        }
         for (int i = 0; i < boids.size(); i++) {
             double targetVelocityX = 0;
             double targetVelocityY = 0;
@@ -82,9 +78,8 @@ public class BoidManager {
                 }
                 if (boid.distanceTo(boids.get(j)) < visibleRadius) {
                     numNeighbours++;
-                    // have to use oldVelocity as original velocity may be updated
-                    targetVelocityX += oldVelocityX.get(j);
-                    targetVelocityY += oldVelocityY.get(j);
+                    targetVelocityX += boids.get(j).getVelocityX();
+                    targetVelocityY += boids.get(j).getVelocityY();
                 }
             }
             if (numNeighbours == 0) {
@@ -92,9 +87,10 @@ public class BoidManager {
             }
             targetVelocityX /= numNeighbours;
             targetVelocityY /= numNeighbours;
-            // have to use oldVelocity as original velocity may be updated
-            boid.velocityX = oldVelocityX.get(i) + this.alignmentFactor * (targetVelocityX - oldVelocityX.get(i));
-            boid.velocityY = oldVelocityY.get(i) + this.alignmentFactor * (targetVelocityY - oldVelocityY.get(i));
+            boid.applyAcceleration(
+                this.alignmentFactor * (targetVelocityX - boid.getVelocityX()),
+                this.alignmentFactor * (targetVelocityY - boid.getVelocityY())
+            );
         }
     }
 
@@ -108,8 +104,8 @@ public class BoidManager {
                 Boid other = boids.get(j);
                 if (boid.distanceTo(other) < visibleRadius) {
                     numNeighbours++;
-                    aggregatePosX += other.posX;
-                    aggregatePosY += other.posY;
+                    aggregatePosX += other.getPosX();
+                    aggregatePosY += other.getPosY();
                 }
             }
             if (numNeighbours == 0) {
@@ -117,8 +113,12 @@ public class BoidManager {
             }
             aggregatePosX /= numNeighbours;
             aggregatePosY /= numNeighbours;
-            boid.velocityX += this.steeringFactor * (aggregatePosX - boid.posX);
-            boid.velocityY += this.steeringFactor * (aggregatePosY - boid.posY);
+            double dx = aggregatePosX - boid.getPosX();
+            double dy = aggregatePosY - boid.getPosY();
+            boid.applyAcceleration(
+                this.steeringFactor * dx,
+                this.steeringFactor * dy
+            );
         }
     }
 
@@ -136,42 +136,24 @@ public class BoidManager {
                 Boid other = boids.get(j);
                 if (boid.distanceTo(other) < collisionRadius) {
                     numNeighbours++;
-                    aggregateDeltaX += boid.posX - other.posX;
-                    aggregateDeltaY += boid.posY - other.posY;
+                    aggregateDeltaX += boid.getPosX() - other.getPosX();
+                    aggregateDeltaY += boid.getPosY() - other.getPosY();
                 }
             }
             if (numNeighbours == 0) {
                 continue;
             }
-            boid.velocityX += this.collisionAvoidanceFactor * aggregateDeltaX;
-            boid.velocityY += this.collisionAvoidanceFactor * aggregateDeltaY;
+            boid.applyAcceleration(
+                this.collisionAvoidanceFactor * aggregateDeltaX,
+                this.collisionAvoidanceFactor * aggregateDeltaY
+            );
         }
     }
 
-    private void boundBoids() {
-        for (int i = 0; i < boids.size(); i++) {
-            Boid boid = boids.get(i);
-            double velocityMagnitude = Math.sqrt(boid.velocityX * boid.velocityX + boid.velocityY * boid.velocityY);
-            boid.velocityX *= boidFixedVelocity / velocityMagnitude;
-            boid.velocityY *= boidFixedVelocity / velocityMagnitude;
-            if (boid.posX + boid.velocityX < 0) {
-                boid.velocityX *= -1;
-            } else if (boid.posX + boid.velocityX > maxWidth) {
-                boid.velocityX *= -1;
-            }
-            if (boid.posY + boid.velocityY < 0) {
-                boid.velocityY *= -1;
-            } else if (boid.posY + boid.velocityY > maxHeight) {
-                boid.velocityY *= -1;
-            }
-        }
-    }
 
     private void moveBoids() {
         for (int i = 0; i < boids.size(); i++) {
-            Boid boid = boids.get(i);
-            boid.posX += boid.velocityX;
-            boid.posY += boid.velocityY;
+            boids.get(i).update();
         }
     }
 }
